@@ -528,7 +528,7 @@ psmove_tracker_new_with_camera(int camera) {
 	tracker->rHSV = cvScalar(COLOR_FILTER_RANGE_H, COLOR_FILTER_RANGE_S, COLOR_FILTER_RANGE_V, 0);
 	tracker->storage = cvCreateMemStorage(0);
 
-        tracker->dimming_factor = 0.;
+	tracker->dimming_factor = 0.;
 
 	tracker->calibration_t = CALIBRATION_DIFF_T;
 	tracker->tracker_t1 = TRACKER_QUALITY_T1;
@@ -542,69 +542,36 @@ psmove_tracker_new_with_camera(int camera) {
 	tracker->color_t3 = COLOR_UPDATE_QUALITY_T3;
 	tracker->color_update_rate = COLOR_UPDATE_RATE;
 
-#ifdef __APPLE__
     PSMove *move = psmove_connect();
     psmove_set_leds(move, 255, 255, 255);
     psmove_update_leds(move);
 
-    printf("Cover the iSight camera with the sphere and press the Move button\n");
+    printf("Cover the camera with the sphere and press the Move button\n");
     _psmove_wait_for_button(move, Btn_MOVE);
     psmove_set_leds(move, 0, 0, 0);
     psmove_update_leds(move);
     psmove_set_leds(move, 255, 255, 255);
     psmove_update_leds(move);
-#endif
 
 	// start the video capture device for tracking
 	tracker->cc = camera_control_new(camera);
 
-        char *intrinsics_xml = psmove_util_get_file_path(INTRINSICS_XML);
-        char *distortion_xml = psmove_util_get_file_path(DISTORTION_XML);
+	char *intrinsics_xml = psmove_util_get_file_path(INTRINSICS_XML);
+	char *distortion_xml = psmove_util_get_file_path(DISTORTION_XML);
 	camera_control_read_calibration(tracker->cc, intrinsics_xml, distortion_xml);
-        free(intrinsics_xml);
-        free(distortion_xml);
+	free(intrinsics_xml);
+	free(distortion_xml);
 
 	// backup the systems settings, if not already backuped
 	char *filename = psmove_util_get_file_path(PSEYE_BACKUP_FILE);
-        camera_control_backup_system_settings(tracker->cc, filename);
+	camera_control_backup_system_settings(tracker->cc, filename);
 	free(filename);
 
-#ifndef __APPLE__
-        // try to load color mapping data (not on Mac OS X for now, because the
-        // automatic white balance means we get different colors every time)
-        filename = psmove_util_get_file_path(COLOR_MAPPING_DAT);
-        FILE *fp = NULL;
-        time_t now = time(NULL);
-        struct stat st;
-        memset(&st, 0, sizeof(st));
-
-        if (stat(filename, &st) == 0 && now != (time_t)-1) {
-            if (st.st_mtime >= (now - COLOR_MAPPING_MAX_AGE)) {
-                fp = fopen(filename, "rb");
-            } else {
-                printf("%s is too old - not restoring colors.\n", filename);
-            }
-        }
-
-        if (fp) {
-            if (!fread(&(tracker->color_mapping),
-                        sizeof(struct ColorMappingRingBuffer),
-                        1, fp)) {
-                psmove_WARNING("Cannot read data from: %s\n", filename);
-            } else {
-                printf("color mappings restored.\n");
-            }
-
-            fclose(fp);
-        }
-        free(filename);
-#endif
-
-        // Default to the distance parameters for the PS Eye camera
-        tracker->distance_parameters = pseye_distance_parameters;
+	// Default to the distance parameters for the PS Eye camera
+	tracker->distance_parameters = pseye_distance_parameters;
 
 	// use static exposure
-        psmove_tracker_set_exposure(tracker, Exposure_LOW);
+	psmove_tracker_set_exposure(tracker, Exposure_LOW);
 
 	// just query a frame so that we know the camera works
 	IplImage* frame = NULL;
